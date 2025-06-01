@@ -11,7 +11,7 @@ use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserController; // ADD THIS LINE
 
 /*
 |--------------------------------------------------------------------------
@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard')->middleware('admin');
     Route::get('/pharmacist/dashboard', [PharmacistController::class, 'index'])->name('pharmacist.dashboard')->middleware('pharmacist');
     
-    // Reports routes (accessible à tous les utilisateurs connectés)
+    // CORRIGÉ : Routes des rapports (accessible à tous les utilisateurs connectés)
     Route::prefix('rapports')->name('reports.')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('index');
         Route::get('/ventes', [ReportController::class, 'sales'])->name('sales');
@@ -115,8 +115,8 @@ Route::middleware('auth')->group(function () {
         Route::post('purchases/{id}/receive', [PurchaseController::class, 'processReception'])->name('purchases.process-reception');
         Route::patch('purchases/{id}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
     });
-
-    // NOUVELLES ROUTES ADMIN - À AJOUTER
+    
+    // Admin panel routes
     Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
         // Dashboard
         Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
@@ -126,7 +126,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
         Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
         
-        // User management - ROUTES COMPLÈTES
+        // User management
         Route::resource('users', UserController::class)->names([
             'index' => 'users.index',
             'create' => 'users.create',
@@ -138,18 +138,14 @@ Route::middleware('auth')->group(function () {
         ]);
         
         // Additional user management routes
+        Route::get('users/export', [UserController::class, 'export'])->name('users.export');
         Route::patch('users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::patch('users/{id}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
         Route::get('users/{id}/activity', [UserController::class, 'activityLogs'])->name('users.activity-logs');
-        Route::get('users/export', [UserController::class, 'export'])->name('users.export');
         
         // Activity logs
         Route::get('/activity-logs', [AdminController::class, 'activityLogs'])->name('activity-logs');
         Route::get('/activity-logs/export', [AdminController::class, 'exportActivityLogs'])->name('export-activity-logs');
         Route::post('/clear-old-logs', [AdminController::class, 'clearOldLogs'])->name('clear-old-logs');
-        
-        // System monitoring routes
-        Route::get('/system-status', [AdminController::class, 'systemStatus'])->name('system-status');
-        Route::get('/performance-metrics', [AdminController::class, 'performanceMetrics'])->name('performance-metrics');
     });
 });

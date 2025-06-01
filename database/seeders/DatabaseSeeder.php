@@ -17,6 +17,9 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             SupplierSeeder::class,
             
+            // System settings should be initialized early
+            SystemSettingsSeeder::class,
+            
             // Ensuite les produits (qui dépendent des catégories et fournisseurs)
             ProductSeeder::class,
             

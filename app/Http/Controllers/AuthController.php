@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use App\Models\User;
 use App\Models\PasswordResetCode;
+use App\Models\ActivityLog;
 use App\Mail\PasswordResetCode as PasswordResetCodeMail;
 
 class AuthController extends Controller
@@ -62,6 +63,22 @@ class AuthController extends Controller
             $request->session()->regenerate();
             
             $user = Auth::user();
+            
+            // Update last login info
+            $user->update([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ]);
+            
+            // Log login activity - THIS WAS MISSING!
+            ActivityLog::logActivity(
+                'login',
+                'Connexion réussie',
+                null,
+                null,
+                ['ip' => $request->ip(), 'user_agent' => $request->userAgent()]
+            );
+            
             Log::info('User logged in successfully', [
                 'user_id' => $user->id,
                 'email' => $user->email,
@@ -75,40 +92,7 @@ class AuthController extends Controller
                 return redirect()->intended(route('pharmacist.dashboard'));
             }
         }
-// In AuthController::login method, after successful authentication, add:
-if (Auth::attempt($credentials, $remember)) {
-    $request->session()->regenerate();
-    
-    $user = Auth::user();
-    
-    // Update last login info
-    $user->update([
-        'last_login_at' => now(),
-        'last_login_ip' => $request->ip(),
-    ]);
-    
-    // Log login activity
-    ActivityLog::logActivity(
-        'login',
-        'Connexion réussie',
-        null,
-        null,
-        ['ip' => $request->ip(), 'user_agent' => $request->userAgent()]
-    );
-    
-    Log::info('User logged in successfully', [
-        'user_id' => $user->id,
-        'email' => $user->email,
-        'ip' => $request->ip()
-    ]);
 
-    // Redirect based on user role
-    if ($user->isAdmin()) {
-        return redirect()->intended(route('admin.dashboard'));
-    } else {
-        return redirect()->intended(route('pharmacist.dashboard'));
-    }
-}
         return redirect()->back()
             ->withErrors(['email' => 'Ces identifiants ne correspondent pas à nos enregistrements.'])
             ->withInput();
@@ -320,6 +304,17 @@ if (Auth::attempt($credentials, $remember)) {
      */
     public function logout(Request $request)
     {
+        // Log logout activity BEFORE logging out
+        if (auth()->check()) {
+            ActivityLog::logActivity(
+                'logout',
+                'Déconnexion',
+                null,
+                null,
+                ['ip' => $request->ip(), 'user_agent' => $request->userAgent()]
+            );
+        }
+        
         Auth::logout();
         
         $request->session()->invalidate();

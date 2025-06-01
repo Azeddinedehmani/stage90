@@ -63,6 +63,91 @@ class UserController extends Controller
     }
 
     /**
+     * Export users to CSV
+     */
+    public function export(Request $request)
+    {
+        $query = User::withCount('activityLogs');
+
+        // Apply same filters as in index method
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('role') && $request->role !== '') {
+            $query->where('role', $request->role);
+        }
+
+        if ($request->has('status') && $request->status !== '') {
+            $query->where('is_active', $request->status === 'active');
+        }
+
+        $users = $query->latest()->get();
+
+        // Log export activity
+        ActivityLog::logActivity(
+            'export',
+            'Export de la liste des utilisateurs (' . $users->count() . ' utilisateurs)'
+        );
+
+        $filename = 'users_export_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($users) {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for UTF-8
+            fwrite($file, "\xEF\xBB\xBF");
+            
+            // CSV headers
+            fputcsv($file, [
+                'ID',
+                'Nom',
+                'Email',
+                'Téléphone',
+                'Rôle',
+                'Statut',
+                'Date de naissance',
+                'Adresse',
+                'Créé le',
+                'Dernière connexion',
+                'Dernière IP',
+                'Total activités'
+            ], ';');
+
+            foreach ($users as $user) {
+                fputcsv($file, [
+                    $user->id,
+                    $user->name,
+                    $user->email,
+                    $user->phone ?: '',
+                    $user->role === 'responsable' ? 'Responsable' : 'Pharmacien',
+                    $user->is_active ? 'Actif' : 'Inactif',
+                    $user->date_of_birth ? $user->date_of_birth->format('d/m/Y') : '',
+                    $user->address ?: '',
+                    $user->created_at->format('d/m/Y H:i'),
+                    $user->last_login_at ? $user->last_login_at->format('d/m/Y H:i') : 'Jamais connecté',
+                    $user->last_login_ip ?: '',
+                    $user->activity_logs_count
+                ], ';');
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
      * Show the form for creating a new user
      */
     public function create()

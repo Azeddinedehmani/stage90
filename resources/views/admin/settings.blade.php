@@ -36,15 +36,43 @@
     </div>
 @endif
 
+@php
+function getGroupIcon($group) {
+    return match($group) {
+        'app' => 'fa-mobile-alt',
+        'pharmacy' => 'fa-clinic-medical',
+        'tax' => 'fa-calculator',
+        'stock' => 'fa-boxes',
+        'security' => 'fa-shield-alt',
+        'backup' => 'fa-database',
+        'prescription' => 'fa-file-prescription',
+        default => 'fa-cog'
+    };
+}
+
+function getGroupName($group) {
+    return match($group) {
+        'app' => 'Application',
+        'pharmacy' => 'Pharmacie',
+        'tax' => 'Fiscalité',
+        'stock' => 'Stock et inventaire',
+        'security' => 'Sécurité',
+        'backup' => 'Sauvegarde',
+        'prescription' => 'Ordonnances',
+        default => ucfirst($group)
+    };
+}
+@endphp
+
 <form action="{{ route('admin.settings.update') }}" method="POST">
     @csrf
     
-    @foreach($settings as $group => $groupSettings)
+    @forelse($settings as $group => $groupSettings)
         <div class="card mb-4">
             <div class="card-header bg-light">
                 <h5 class="card-title mb-0">
-                    <i class="fas {{ $this->getGroupIcon($group) }} me-2"></i>
-                    {{ $this->getGroupName($group) }}
+                    <i class="fas {{ getGroupIcon($group) }} me-2"></i>
+                    {{ getGroupName($group) }}
                 </h5>
             </div>
             <div class="card-body">
@@ -98,21 +126,37 @@
                 </div>
             </div>
         </div>
-    @endforeach
-
-    <div class="card">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-1">Sauvegarder les paramètres</h6>
-                    <small class="text-muted">Les modifications seront appliquées immédiatement</small>
+    @empty
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Aucun paramètre trouvé.</strong> 
+                    Les paramètres par défaut doivent être initialisés.
                 </div>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save me-1"></i> Enregistrer tous les paramètres
-                </button>
+                <p class="text-muted">
+                    Veuillez exécuter la commande suivante pour initialiser les paramètres système :
+                </p>
+                <code>php artisan db:seed --class=SystemSettingsSeeder</code>
             </div>
         </div>
-    </div>
+    @endforelse
+
+    @if(!$settings->isEmpty())
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Sauvegarder les paramètres</h6>
+                        <small class="text-muted">Les modifications seront appliquées immédiatement</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Enregistrer tous les paramètres
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 </form>
 
 @section('scripts')
@@ -139,33 +183,5 @@
     });
 </script>
 @endsection
-
-@php
-function getGroupIcon($group) {
-    return match($group) {
-        'app' => 'fa-mobile-alt',
-        'pharmacy' => 'fa-clinic-medical',
-        'tax' => 'fa-calculator',
-        'stock' => 'fa-boxes',
-        'security' => 'fa-shield-alt',
-        'backup' => 'fa-database',
-        'prescription' => 'fa-file-prescription',
-        default => 'fa-cog'
-    };
-}
-
-function getGroupName($group) {
-    return match($group) {
-        'app' => 'Application',
-        'pharmacy' => 'Pharmacie',
-        'tax' => 'Fiscalité',
-        'stock' => 'Stock et inventaire',
-        'security' => 'Sécurité',
-        'backup' => 'Sauvegarde',
-        'prescription' => 'Ordonnances',
-        default => ucfirst($group)
-    };
-}
-@endphp
 
 @endsection
